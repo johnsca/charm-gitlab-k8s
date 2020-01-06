@@ -22,4 +22,6 @@ series:
 resources:
   gitlab_image:
     type: oci-image
-    description: "Image used for gitlab pod."
+    description: |
+      Image used for gitlab pod. Must use gitlab/gitlab-ce:12.0.12-ce.0 or older
+      to use the mysql interface.

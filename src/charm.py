@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
 
+import sys
+sys.path.append('lib')
+
 from ops.charm import CharmBase
 from ops.framework import StoredState
 from ops.main import main
@@ -49,23 +52,35 @@ class GitLabK8sCharm(CharmBase):
         if not self.mysql.is_ready:
             unit.status = WaitingStatus('Waiting for database')
             return
+        if not self.framework.model.unit.is_leader():
+            unit.status = WaitingStatus('Not leader')
+            return
         unit.status = MaintenanceStatus('Configuring container')
         self.framework.model.pod.set_spec({
-            'name': self.framework.model.app.name,
-            'docker_image_path': self.gitlab_image.registry_path,
-            'docker_image_username': self.gitlab_image.username,
-            'docker_image_password': self.gitlab_image.password,
-            'port': self.framework.model.config['http_port'],
-            'config': '; '.join([
-                f"postgresql['enable'] = false",  # disable DB included in image
-                f"gitlab_rails['db_adapter'] = 'mysql'",
-                f"gitlab_rails['db_encoding'] = 'utf8'",
-                f"gitlab_rails['db_database'] = '{self.mysql.database}'",
-                f"gitlab_rails['db_host'] = '{self.mysql.host}'",
-                f"gitlab_rails['db_port'] = '{self.mysql.port}'",
-                f"gitlab_rails['db_username'] = '{self.mysql.username}'",
-                f"gitlab_rails['db_password'] = '{self.mysql.password}'",
-            ]),
+            'containers': [{
+                'name': self.framework.model.app.name,
+                'imageDetails': {
+                    'imagePath': self.gitlab_image.registry_path,
+                    'username': self.gitlab_image.username,
+                    'password': self.gitlab_image.password,
+                },
+                'ports': [{
+                    'containerPort': int(self.framework.model.config['http_port']),
+                    'protocol': 'TCP',
+                }],
+                'config': {
+                    'GITLAB_OMNIBUS_CONFIG': '; '.join([
+                        f"postgresql['enable'] = false",  # disable DB included in image
+                        f"gitlab_rails['db_adapter'] = 'mysql2'",
+                        f"gitlab_rails['db_encoding'] = 'utf8'",
+                        f"gitlab_rails['db_database'] = '{self.mysql.database}'",
+                        f"gitlab_rails['db_host'] = '{self.mysql.host}'",
+                        f"gitlab_rails['db_port'] = {self.mysql.port}",
+                        f"gitlab_rails['db_username'] = '{self.mysql.username}'",
+                        f"gitlab_rails['db_password'] = '{self.mysql.password}'",
+                    ]),
+                }
+            }],
         })
         self.state.is_started = True
         unit.status = ActiveStatus()

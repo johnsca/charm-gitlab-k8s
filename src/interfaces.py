@@ -16,7 +16,7 @@ class MySQLInterfaceRequires(Part):
     def _relations(self):
         return self.framework.model.relations[self.name]
 
-    def _field(self, field_name):
+    def _field(self, field_name, default=None):
         if not self.is_single:
             return None
         rel = self._relations[0]
@@ -26,7 +26,7 @@ class MySQLInterfaceRequires(Part):
             field_value = rel.data[candidate].get(field_name)
             if field_value:
                 return field_value
-        return None
+        return default
 
     @property
     def is_joined(self):
@@ -38,7 +38,7 @@ class MySQLInterfaceRequires(Part):
 
     @property
     def is_ready(self):
-        return all([self.database, self.host, self.username, self.password])
+        return self.is_single and all([self.database, self.host, self.username, self.password])
 
     @property
     def database(self):
@@ -49,8 +49,12 @@ class MySQLInterfaceRequires(Part):
         return self._field('host')
 
     @property
+    def port(self):
+        return int(self._field('port', '3306'))
+
+    @property
     def username(self):
-        return self._field('username')
+        return self._field('user')
 
     @property
     def password(self):
