@@ -23,10 +23,6 @@ from resources import OCIImageResource
 class GitLabK8sCharm(CharmBase):
     state = StoredState()
 
-    website = HTTPInterfaceProvides()
-    mysql = MySQLInterfaceRequires()
-    gitlab_image = OCIImageResource()
-
     def __init__(self, framework, key):
         super().__init__(framework, key)
 
@@ -36,6 +32,11 @@ class GitLabK8sCharm(CharmBase):
                       self.on.mysql_relation_changed):
             self.framework.observe(event, self.on_start)
         self.framework.observe(self.on.website_relation_joined, self)
+
+        self.website = HTTPInterfaceProvides('website')
+        self.mysql = MySQLInterfaceRequires('mysql')
+        self.gitlab_image = OCIImageResource('gitlab_image')
+
 
     def on_install(self, event):
         self.state.is_started = False

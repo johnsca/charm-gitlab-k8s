@@ -1,7 +1,11 @@
-from helpers import Part
+from ops.framework import Object
 
 
-class HTTPInterfaceProvides(Part):
+class HTTPInterfaceProvides(Object):
+    def __init__(self, parent, relation_name):
+        super().__init__(parent, relation_name)
+        self.relation_name = relation_name
+
     @property
     def clients(self):
         return []
@@ -11,10 +15,14 @@ class HTTPInterfaceClient:
     pass
 
 
-class MySQLInterfaceRequires(Part):
+class MySQLInterfaceRequires:
+    def __init__(self, parent, relation_name):
+        super().__init__(parent, relation_name)
+        self.relation_name = relation_name
+
     @property
     def _relations(self):
-        return self.framework.model.relations[self.name]
+        return self.framework.model.relations[self.relation_name]
 
     def _field(self, field_name, default=None):
         if not self.is_single:

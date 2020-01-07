@@ -1,19 +1,21 @@
 from pathlib import Path
 
 import yaml
+from ops.framework import Object
 from ops.model import ModelError
 
-from helpers import Part
 
-
-class OCIImageResource(Part):
-    registry_path = None
-    username = None
-    password = None
+class OCIImageResource(Object):
+    def __init__(self, parent, resource_name):
+        super().__init__(parent, resource_name)
+        self.resource_name = resource_name
+        self.registry_path = None
+        self.username = None
+        self.password = None
 
     def fetch(self):
         try:
-            resource_path = self.framework.model.resources.fetch(self.name)
+            resource_path = self.framework.model.resources.fetch(self.resource_name)
         except ModelError:
             raise
         resource_text = Path(resource_path).read_text()
