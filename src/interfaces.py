@@ -15,7 +15,7 @@ class HTTPInterfaceClient:
     pass
 
 
-class MySQLInterfaceRequires:
+class MySQLInterfaceRequires(Object):
     def __init__(self, parent, relation_name):
         super().__init__(parent, relation_name)
         self.relation_name = relation_name

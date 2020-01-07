@@ -33,9 +33,9 @@ class GitLabK8sCharm(CharmBase):
             self.framework.observe(event, self.on_start)
         self.framework.observe(self.on.website_relation_joined, self)
 
-        self.website = HTTPInterfaceProvides('website')
-        self.mysql = MySQLInterfaceRequires('mysql')
-        self.gitlab_image = OCIImageResource('gitlab_image')
+        self.website = HTTPInterfaceProvides(self, 'website')
+        self.mysql = MySQLInterfaceRequires(self, 'mysql')
+        self.gitlab_image = OCIImageResource(self, 'gitlab_image')
 
 
     def on_install(self, event):
