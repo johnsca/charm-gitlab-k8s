@@ -1,13 +1,7 @@
 GitLab Charm for Kubernetes Models
 ==================================
 
-To use, first install the framework using pip:
-
-```bash
-pip install -t lib/ https://github.com/canonical/operator
-```
-
-Then deploy the charm with an appropriate image resource:
+To use, deploy the charm with an appropriate image resource:
 
 ```bash
 docker pull gitlab/gitlab-ce:12.0.12-ce.0

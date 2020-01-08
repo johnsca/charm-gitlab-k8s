@@ -1,4 +1,1 @@
-lib/ops
-lib/ops-*.dist-info
-lib/ops-*.egg-info
 .idea
