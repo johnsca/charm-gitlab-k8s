@@ -14,10 +14,7 @@ class OCIImageResource(Object):
         self.password = None
 
     def fetch(self):
-        try:
-            resource_path = self.framework.model.resources.fetch(self.resource_name)
-        except ModelError:
-            raise
+        resource_path = self.framework.model.resources.fetch(self.resource_name)
         resource_text = Path(resource_path).read_text()
         if not resource_text:
             raise ValueError('empty yaml')
@@ -29,4 +26,3 @@ class OCIImageResource(Object):
             self.registry_path = resource_data['registrypath']
             self.username = resource_data['username']
             self.password = resource_data['password']
-            return True
