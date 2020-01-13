@@ -3,19 +3,37 @@
 import sys
 sys.path.append('lib')
 
-from ops.charm import CharmBase
-from ops.framework import StoredState
+from ops.charm import CharmBase, CharmEvents
+from ops.framework import EventBase, EventSource, StoredState
 from ops.main import main
 from ops.model import (
     ActiveStatus,
-    BlockedStatus,
-    ModelError,
+    MaintenanceStatus,
     WaitingStatus,
 )
 
 from interface_http import HTTPServer
 from interface_mysql import MySQLServer, MySQLServerError
-from oci_image import OCIImageResource
+from oci_image import OCIImageResource, FetchError
+
+
+class ConfigurePodEvent(EventBase):
+    pass
+
+
+class ServeWebsiteEvent(EventBase):
+    pass
+
+
+class GitLabK8sCharmEvents(CharmEvents):
+    configure_pod = EventSource(ConfigurePodEvent)
+    serve_website = EventSource(ServeWebsiteEvent)
+
+
+class NotLeaderError(Exception):
+    def __init__(self):
+        super().__init__('not leader')
+        self.status = WaitingStatus('Not leader')
 
 
 class GitLabK8sCharm(CharmBase):
@@ -29,33 +47,30 @@ class GitLabK8sCharm(CharmBase):
         self.gitlab_image = OCIImageResource(self, 'gitlab_image')
 
         self.state.is_started = getattr(self.state, 'is_started', False)
+        self.state.has_website = getattr(self.state, 'has_website', False)
 
-        self.framework.observe(self.on.start, self.update_status)
-        self.framework.observe(self.on.update_status, self.update_status)
-        self.framework.observe(self.on.leader_elected, self.update_status)
-        self.framework.observe(self.on.upgrade_charm, self.update_status)
-        self.framework.observe(self.mysql.on.database_available, self.configure_container)
-        self.framework.observe(self.mysql.on.database_changed, self.configure_container)
-        self.framework.observe(self.on.website_relation_joined, self)
+        self.framework.observe(self.on.start, self.check_ready)  # TODO: change to install
+        self.framework.observe(self.on.leader_elected, self.check_ready)
+        self.framework.observe(self.on.upgrade_charm, self.check_ready)
+        self.framework.observe(self.on.config_changed, self.check_ready)
+        self.framework.observe(self.mysql.on.database_available, self.check_ready)
+        self.framework.observe(self.mysql.on.database_changed, self.check_ready)
+        self.framework.observe(self.on.configure_pod, self.configure_pod)
+        self.framework.observe(self.website.on.new_client, self.serve_website)
 
-    def update_status(self, event):
+    def check_ready(self, event):
         try:
-            db = self.mysql.database()
-        except MySQLServerError as e:
+            self.mysql.database()
+            self.gitlab_image.fetch()
+            if not self.model.unit.is_leader():
+                raise NotLeaderError()
+        except (MySQLServerError, FetchError, NotLeaderError) as e:
             self.model.unit.status = e.status
         else:
-            if not self.model.unit.is_leader():
-                self.model.unit.status = WaitingStatus('Not leader')
+            self.on.configure_pod.emit()
 
-    def configure_container(self, event):
-        if not self.model.unit.is_leader():
-            self.model.unit.status = WaitingStatus('Not leader')
-            return
-        try:
-            self.gitlab_image.fetch()
-        except (ModelError, ValueError) as e:
-            self.model.unit.status = BlockedStatus(f'Unable to fetch image resource: {e}')
-            return
+    def configure_pod(self, event):
+        self.model.unit.status = MaintenanceStatus('Configuring pod')
         db = self.mysql.database()
         self.model.pod.set_spec({
             'containers': [{
@@ -84,11 +99,11 @@ class GitLabK8sCharm(CharmBase):
             }],
         })
         self.state.is_started = True
+        self.on.serve_website.emit()
         self.model.unit.status = ActiveStatus()
 
-    def on_website_relation_joined(self, event):
+    def serve_website(self, event):
         if not self.state.is_started:
-            event.defer()
             return
 
         for client in self.website.clients:
