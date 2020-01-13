@@ -32,6 +32,8 @@ class GitLabK8sCharm(CharmBase):
 
         self.framework.observe(self.on.start, self.update_status)
         self.framework.observe(self.on.update_status, self.update_status)
+        self.framework.observe(self.on.leader_elected, self.update_status)
+        self.framework.observe(self.on.upgrade_charm, self.update_status)
         self.framework.observe(self.mysql.on.database_available, self.configure_container)
         self.framework.observe(self.mysql.on.database_changed, self.configure_container)
         self.framework.observe(self.on.website_relation_joined, self)
