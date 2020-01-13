@@ -7,3 +7,6 @@
 [submodule "mod/interface-http"]
 	path = mod/interface-http
 	url = git@github.com:johnsca/interface-http.git
+[submodule "mod/resource-oci-image"]
+	path = mod/resource-oci-image
+	url = git@github.com:johnsca/resource-oci-image.git
