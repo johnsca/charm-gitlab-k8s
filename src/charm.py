@@ -38,6 +38,7 @@ class NotLeaderError(Exception):
 
 class GitLabK8sCharm(CharmBase):
     state = StoredState()
+    on = GitLabK8sCharmEvents()
 
     def __init__(self, framework, key):
         super().__init__(framework, key)
