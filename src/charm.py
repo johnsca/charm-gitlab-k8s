@@ -23,34 +23,27 @@ class GitLabK8sCharm(CharmBase):
     def __init__(self, framework, key):
         super().__init__(framework, key)
 
-        # This has to come first to ensure the charm state is initialized before any components observe the
-        # start event, lest they emit something that we observe which expects the state to be initialized.
+        # This has to come before creating the sub-components to ensure the charm state is
+        # initialized before any of the components observe the start event, lest they emit
+        # something that we observe which expects the state to be initialized.
         self.framework.observe(self.on.start, self.init_state)
 
         self.website = HTTPServer(self, 'website')
         self.mysql = MySQLServer(self, 'mysql')
         self.gitlab_image = OCIImageResource(self, 'gitlab_image')
 
-        # The order of these observe calls are significant. Any event which might lead to a "waiting" status
-        # must be observed before any event that might lead to a "blocked" status, so that the user isn't left
-        # with a status that obscures the fact that manual intervention is required with a less critical "waiting"
-        # status. Similarly, any handler which depends on state data which is set by other handlers must be
-        # registered as observers after those which control the state data they depend on.
-
-        # Can only lead to either "waiting" status due to leadership, or "active".
+        # TODO: Make sure that handlers / components setting "waiting" or "active" status doesn't clobber "blocked".
         self.framework.observe(self.on.leader_elected, self.configure_pod)
         self.framework.observe(self.on.config_changed, self.configure_pod)
 
-        # Could lead to either a "waiting" or "blocked" status from the relation, or the calling of configure_pod.
         self.framework.observe(self.mysql.on.database_available, self)
         self.framework.observe(self.mysql.on.database_changed, self.on_database_available)
         self.framework.observe(self.mysql.on.database_unavailable, self)
 
-        # Can only lead to a "blocked" status or the calling of configure_pod.
         self.framework.observe(self.gitlab_image.on.image_available, self)
         self.framework.observe(self.gitlab_image.on.image_failed, self)
 
-        # Requires the state set set by configure_pod.
+        # Must come last to ensure it happens after configure_pod.
         self.framework.observe(self.website.on.new_client, self)
 
     def init_state(self, event):
