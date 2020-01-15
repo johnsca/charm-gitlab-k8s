@@ -87,7 +87,10 @@ class GitLabK8sCharm(CharmBase):
             return
         # There is no "leadership lost" event to use to manage this status.
         if not self.model.unit.is_leader():
-            self.model.unit.status = WaitingStatus('Only leader can configure pod')
+            # This only seems to happen as something of a race condition, where we might reach this code
+            # before Juju has informed us that we're the leader. Conceptually, I'm not even sure why charm
+            # code would run on a non-leader unit for a K8s charm, since it can't make any meaningful changes.
+            self.model.unit.status = WaitingStatus('Deferring to leader unit to configure pod')
             return
         self.model.unit.status = MaintenanceStatus('Configuring pod')
         db = self.mysql.database()
