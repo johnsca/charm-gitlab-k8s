@@ -1,7 +1,14 @@
 GitLab Charm for Kubernetes Models
 ==================================
 
-To use, deploy the charm with an appropriate image resource:
+To use, first pull in dependencies via `git submodule`:
+
+```bash
+git submodule init
+git submodule update
+```
+
+Then, deploy the charm with an appropriate image resource:
 
 ```bash
 docker pull gitlab/gitlab-ce:12.0.12-ce.0
