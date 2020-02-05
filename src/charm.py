@@ -14,8 +14,8 @@ from ops.model import (
 )
 
 from interface_http import HTTPServer
-from interface_mysql import MySQLClient
-from oci_image import OCIImageResource
+from interface_mysql import MySQLClient, DatabaseError
+from oci_image import OCIImageResource, ResourceError
 
 
 class GitLabK8sCharm(CharmBase):
@@ -55,7 +55,7 @@ class GitLabK8sCharm(CharmBase):
             image_details = self.gitlab_image.fetch()
             db = self.mysql.database()
             self.verify_leadership()
-        except ModelError as e:
+        except (DatabaseError, ResourceError, LeadershipError) as e:
             self.model.unit.status = e.status
             return
         self.model.unit.status = MaintenanceStatus('Configuring pod')
@@ -97,7 +97,8 @@ class GitLabK8sCharm(CharmBase):
 
 class LeadershipError(ModelError):
     def __init__(self):
-        super().__init__('not leader', WaitingStatus('Deferring to leader unit to configure pod'))
+        super().__init__('not leader')
+        self.status = WaitingStatus('Deferring to leader unit to configure pod')
 
 
 if __name__ == '__main__':
